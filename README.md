@@ -1,61 +1,129 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+# Rinha Backend 2024 Q1
 
-## About Laravel
+API RESTful desenvolvida em Laravel 10, com containerização Docker, atendendo os requisitos mínimos da Rinha de Backend 2024 Q1:
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+* Load Balancer (porta 9999) com algoritmo round robin (Nginx).
+* 2 instâncias da API para alta disponibilidade e concorrência.
+* Banco de dados PostgreSQL.
+* Limitação total de recursos (CPU e memória) conforme regras da Rinha.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+---
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Estrutura do Projeto
 
-## Learning Laravel
+* **Laravel 12**: Framework PHP utilizado para desenvolvimento da API.
+* **Docker**: Containerização da aplicação, banco e load balancer.
+* **docker-compose.yml**: Orquestração dos containers (API, DB, Nginx).
+* **nginx.conf**: Configuração do load balancer para proxy reverso e round robin.
+* **script.sql**: Script de criação e popular inicial do banco PostgreSQL.
+* **Seeders Laravel**: Para popular tabelas `users` e `clientes`.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+---
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+## Rotas da API
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+| Método | URI                         | Descrição                        | Restrição     |
+| ------ | --------------------------- | -------------------------------- | ------------- |
+| POST   | `/clientes/{id}/transacoes` | Registra transações para cliente | `id` numérico |
+| GET    | `/clientes/{id}/extrato`    | Consulta extrato do cliente      | `id` numérico |
 
-## Laravel Sponsors
+---
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+## Models
 
-### Premium Partners
+* **User**: Representa usuários do sistema (ex: administradores).
+* **Cliente**: Representa clientes com `nome`, `limite`, `saldo`.
+* **Transacao** (planejado): Guarda as transações feitas pelos clientes.
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development/)**
-- **[Active Logic](https://activelogic.com)**
+---
 
-## Contributing
+## Banco de Dados
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+* **PostgreSQL** rodando em container separado.
+* **Tabelas principais**:
 
-## Code of Conduct
+  * `users`
+  * `clientes`
+  * `transacoes` (futura implementação)
+* **Dados iniciais** são inseridos via `script.sql` e seeders Laravel.
+* A coluna `saldo` não é populada inicialmente para refletir saldo atual em zero.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+---
 
-## Security Vulnerabilities
+## Dockerização
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### docker-compose.yml
 
-## License
+* Define 4 serviços:
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+  * **api01**: Instância 1 da API Laravel.
+  * **api02**: Instância 2 da API Laravel.
+  * **db**: Banco PostgreSQL.
+  * **nginx**: Load balancer configurado para porta 9999.
+
+### Limites de recursos
+
+* CPU total: 1.5 cores (divididos entre serviços).
+* Memória total: 550 MB.
+* Cada serviço possui limites específicos conforme o padrão da Rinha.
+
+---
+
+## Configuração do Nginx (Load Balancer)
+
+* Proxy reverso na porta 9999.
+* Balanceamento round robin entre `api01:8080` e `api02:8080`.
+* Sem logs para performance.
+* Configuração em `nginx.conf`.
+
+---
+
+## Processo de Desenvolvimento
+
+1. Definição das rotas e controllers para endpoints.
+2. Modelagem das entidades e migrations.
+3. Criação dos seeders para dados iniciais.
+4. Containerização dos serviços com Docker e Docker Compose.
+5. Testes locais com o load balancer na porta 9999.
+6. Ajustes de performance para obedecer limites da Rinha.
+7. Preparação para testes Gatling.
+
+---
+
+## Comandos Importantes
+
+* Build dos containers (buildx com plataforma linux/amd64):
+
+  ```
+  docker buildx build --platform linux/amd64 -t 7acini/rinha-2024-q1:latest .
+  ```
+* Iniciar containers:
+
+  ```
+  docker-compose up -d
+  ```
+* Parar containers:
+
+  ```
+  docker-compose down
+  ```
+* Rodar seeders Laravel:
+
+  ```
+  php artisan db:seed
+  ```
+* Ver logs:
+
+  ```
+  docker-compose logs -f
+  ```
+
+---
+
+## Observações
+
+* API deve estar pronta em até 40s para responder o endpoint `/clientes/1/extrato`.
+* Código preparado para escalar horizontalmente via múltiplas instâncias.
+* Limitação de recursos aplicada para evitar ultrapassar quota da Rinha.
+* Testes de performance realizados com Gatling (setup externo).
